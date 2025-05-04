@@ -42,7 +42,7 @@ jobs:
     - name: Terraform Init
       run: |
         pwd
-        cd terraform
+        cd .github/workflows/terraform
         terraform init
     
     - name: Terraform Plan
