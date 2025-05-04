@@ -9,7 +9,7 @@ on:
 
 env:
   PROJECT_ID: unity-ai-ci-cd-pipeline-poc
-  TF_STATE_BUCKET: vpc-sc-terraform-state-unity-ai
+  ORGANIZATION_DOMAIN: derek.it.com
 
 jobs:
   terraform-deploy:
@@ -29,29 +29,32 @@ jobs:
         # Verify authentication
         gcloud auth list
     
+    # We're skipping the bucket creation step that was causing issues
     # - name: Create Terraform state bucket if not exists
-      #run: |
-       # if ! gsutil ls -b gs://${{ env.TF_STATE_BUCKET }} 2>/dev/null; then
-        #  echo "Creating Terraform state bucket..."
-         # gsutil mb -l us-central1 gs://${{ env.TF_STATE_BUCKET }}
-          #gsutil versioning set on gs://${{ env.TF_STATE_BUCKET }}
-        #else
-         # echo "Terraform state bucket already exists."
-        #fi
-
+    #   run: |
+    #     if ! gsutil ls -b gs://${{ env.TF_STATE_BUCKET }} 2>/dev/null; then
+    #       echo "Creating Terraform state bucket..."
+    #       gsutil mb -l us-central1 gs://${{ env.TF_STATE_BUCKET }}
+    #       gsutil versioning set on gs://${{ env.TF_STATE_BUCKET }}
+    #     else
+    #       echo "Terraform state bucket already exists."
+    #     fi
+    
     - name: Terraform Init
       run: |
-        pwd
+        # Navigate to the correct directory where Terraform files are located
         cd .github/workflows/terraform
         terraform init
     
     - name: Terraform Plan
       run: |
+        # Navigate to the correct directory where Terraform files are located
         cd .github/workflows/terraform
-        terraform plan -out=tfplan
+        terraform plan -var="project_id=${{ env.PROJECT_ID }}" -var="organization_domain=${{ env.ORGANIZATION_DOMAIN }}" -out=tfplan
     
     - name: Terraform Apply
       if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
       run: |
+        # Navigate to the correct directory where Terraform files are located
         cd .github/workflows/terraform
         terraform apply -auto-approve tfplan
