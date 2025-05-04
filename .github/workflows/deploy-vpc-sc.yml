@@ -47,9 +47,11 @@ jobs:
     
     - name: Terraform Plan
       run: |
+        cd .github/workflows/terraform
         terraform plan -out=tfplan
     
     - name: Terraform Apply
       if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
       run: |
+        cd .github/workflows/terraform
         terraform apply -auto-approve tfplan
