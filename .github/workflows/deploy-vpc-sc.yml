@@ -42,10 +42,8 @@ jobs:
     - name: Terraform Init
       run: |
         pwd
-        ls -la
-        mkdir -p terraform
-        ls -la terraform/
-        cd terraform && terraform init
+        cd terraform
+        terraform init
     
     - name: Terraform Plan
       run: |
