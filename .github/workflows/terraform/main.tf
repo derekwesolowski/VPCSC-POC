@@ -5,10 +5,6 @@ terraform {
       version = "~> 5.0"
     }
   }
-  # Comment out this section
-  # backend "gcs" {
-    # # Configured dynamically in the GitHub workflow
-  # }
 }
 
 provider "google" {
@@ -19,14 +15,14 @@ provider "google-beta" {
   project = var.project_id
 }
 
-# Get the organization ID
-data "google_organization" "org" {
-  domain = var.organization_domain
+# Use direct organization ID instead of lookup
+locals {
+  organization_id = "176219173478"
 }
 
 # Access context manager policy
 resource "google_access_context_manager_access_policy" "vpc_sc_policy" {
-  parent = "organizations/${data.google_organization.org.org_id}"
+  parent = "organizations/${local.organization_id}"
   title  = "VPC SC Policy"
 }
 
@@ -40,8 +36,7 @@ resource "google_access_context_manager_service_perimeter" "vpc_sc_perimeter" {
     resources = ["projects/${var.project_id}"]
     restricted_services = [
       "storage.googleapis.com",
-      "bigquery.googleapis.com", 
-      # Add other services as needed
+      "bigquery.googleapis.com"
     ]
     
     vpc_accessible_services {
