@@ -1,61 +1,83 @@
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "google" {
-  project = var.project_id
-}
-
-provider "google-beta" {
-  project = var.project_id
-}
-
-# Use direct organization ID instead of lookup
-locals {
-  organization_id = "176219173478"
-}
-
-# Access context manager policy
-resource "google_access_context_manager_access_policy" "vpc_sc_policy" {
-  parent = "organizations/${local.organization_id}"
-  title  = "VPC SC Policy"
-}
-
-# Service perimeter
-resource "google_access_context_manager_service_perimeter" "vpc_sc_perimeter" {
-  parent = "accessPolicies/${google_access_context_manager_access_policy.vpc_sc_policy.name}"
-  name   = "accessPolicies/${google_access_context_manager_access_policy.vpc_sc_policy.name}/servicePerimeters/${var.perimeter_name}"
-  title  = "VPC SC Perimeter"
-  
-  status {
-    resources = ["projects/${var.project_id}"]
-    restricted_services = [
-      "storage.googleapis.com",
-      "bigquery.googleapis.com"
-    ]
-    
-    vpc_accessible_services {
-      enable_restriction = true
-      allowed_services   = ["storage.googleapis.com", "bigquery.googleapis.com"]
-    }
-  }
-}
-
-# Optional: Access level for IP-based restrictions
-resource "google_access_context_manager_access_level" "vpc_sc_access_level" {
-  count  = var.create_access_level ? 1 : 0
-  parent = "accessPolicies/${google_access_context_manager_access_policy.vpc_sc_policy.name}"
-  name   = "accessPolicies/${google_access_context_manager_access_policy.vpc_sc_policy.name}/accessLevels/secure_access_level"
-  title  = "Secure Access Level"
-  
+# Access Level with IP-based access control
+resource "google_access_context_manager_access_level" "basic_access" {
+  parent = "accessPolicies/233140867390"
+  name   = "accessPolicies/233140867390/accessLevels/basic_access"
+  title  = "Basic IP-Based Access"
   basic {
     conditions {
-      ip_subnetworks = var.allowed_ip_subnetworks
+      ip_subnetworks = [
+        "203.0.113.0/32",
+        "35.31.169.6/32"  # VM's IP address
+      ]
     }
+  }
+}
+
+# Service Perimeter for client1
+resource "google_access_context_manager_service_perimeter" "client1_perimeter" {
+  parent = "accessPolicies/233140867390"
+  name   = "accessPolicies/233140867390/servicePerimeters/client1_perimeter"
+  title  = "Client 1 Basic Perimeter"
+  
+  status {
+    resources = ["projects/62088919980"]
+    restricted_services = [
+      "storage.googleapis.com",
+      "bigquery.googleapis.com",
+      "cloudfunctions.googleapis.com",
+      "cloudkms.googleapis.com",
+      "compute.googleapis.com"
+    ]
+    access_levels = [google_access_context_manager_access_level.basic_access.name]
+  }
+}
+
+# Service Perimeter for client2
+resource "google_access_context_manager_service_perimeter" "client2_perimeter" {
+  parent = "accessPolicies/233140867390"
+  name   = "accessPolicies/233140867390/servicePerimeters/client2_perimeter"
+  title  = "Client 2 Basic Perimeter"
+  
+  status {
+    resources = ["projects/366664359091"]
+    restricted_services = [
+      "storage.googleapis.com",
+      "bigquery.googleapis.com",
+      "cloudfunctions.googleapis.com",
+      "cloudkms.googleapis.com",
+      "compute.googleapis.com"
+    ]
+    access_levels = [google_access_context_manager_access_level.basic_access.name]
+  }
+}
+
+# Audit logging configuration for VPC SC violations
+resource "google_project_iam_audit_config" "vpc_sc_audit_client1" {
+  project = "client1-hipaa-20250509033526"
+  service = "allServices"
+  
+  audit_log_config {
+    log_type = "DATA_READ"
+  }
+  audit_log_config {
+    log_type = "DATA_WRITE"
+  }
+  audit_log_config {
+    log_type = "ADMIN_READ"
+  }
+}
+
+resource "google_project_iam_audit_config" "vpc_sc_audit_client2" {
+  project = "client2-hipaa-20250509033526"
+  service = "allServices"
+  
+  audit_log_config {
+    log_type = "DATA_READ"
+  }
+  audit_log_config {
+    log_type = "DATA_WRITE"
+  }
+  audit_log_config {
+    log_type = "ADMIN_READ"
   }
 }
